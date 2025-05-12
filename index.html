@@ -18,16 +18,24 @@
             <div class="header-content">
                 <h1>MusicApp</h1>
                 <div class="header-controls">
-                    <button id="theme-toggle" aria-label="Cambiar tema">
-                        <i class="fas fa-moon"></i>
-                    </button>
                     <div class="search-container">
                         <input type="text" id="search" placeholder="Buscar álbumes, artistas...">
                         <i class="fas fa-search"></i>
                     </div>
-                    <button id="storage-btn" class="secondary-btn small-btn">
-                        <i class="fas fa-database"></i> Almacenamiento
-                    </button>
+                    <div class="button-group">
+                        <button id="theme-toggle" aria-label="Cambiar tema">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        <button id="profile-btn" class="secondary-btn small-btn">
+                            <i class="fas fa-user"></i> Perfil
+                        </button>
+                        <button id="storage-btn" class="secondary-btn small-btn">
+                            <i class="fas fa-database"></i> Almacenamiento
+                        </button>
+                        <button id="settings-btn" class="secondary-btn small-btn">
+                            <i class="fas fa-cog"></i> Configuración
+                        </button>
+                    </div>
                     <button id="add-album-btn" class="primary-btn">
                         <i class="fas fa-plus"></i> Añadir Álbum
                     </button>
@@ -90,6 +98,15 @@
                     </div>
                     <div id="detail-tracks-list" class="tracks-list">
                         <!-- Las pistas se cargarán dinámicamente aquí -->
+                    </div>
+                </div>
+                <!-- Información del usuario que subió el álbum -->
+                <div class="album-uploader-info">
+                    <p>Este álbum fue subido por: <a href="#" id="album-uploader" class="user-profile-link">Usuario</a></p>
+                    <div class="uploader-actions">
+                        <button id="view-profile-btn" class="secondary-btn small-btn">
+                            <i class="fas fa-user"></i> Ver Perfil
+                        </button>
                     </div>
                 </div>
             </div>
@@ -351,6 +368,238 @@
                     <button type="submit" class="primary-btn full-width-btn">Añadir Pista</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal de Configuración -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Configuración</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="settings-container">
+                <div class="settings-section">
+                    <h3>Reproducción</h3>
+                    <div class="setting-item">
+                        <label for="autoplay-setting">
+                            <span>Reproducción automática</span>
+                            <span class="setting-description">Reproducir automáticamente al abrir un álbum</span>
+                        </label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="autoplay-setting">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="skip-seconds">
+                            <span>Segundos de salto</span>
+                            <span class="setting-description">Segundos al avanzar/retroceder</span>
+                        </label>
+                        <input type="number" id="skip-seconds" min="5" max="60" step="5" value="10" class="setting-input">
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Ecualizador</h3>
+                    <div class="equalizer-container">
+                        <div class="eq-slider-group">
+                            <label for="eq-bass">Graves</label>
+                            <input type="range" id="eq-bass" class="eq-slider" min="-12" max="12" value="0" step="1">
+                            <span class="eq-value" id="eq-bass-value">0 dB</span>
+                        </div>
+                        <div class="eq-slider-group">
+                            <label for="eq-mid">Medios</label>
+                            <input type="range" id="eq-mid" class="eq-slider" min="-12" max="12" value="0" step="1">
+                            <span class="eq-value" id="eq-mid-value">0 dB</span>
+                        </div>
+                        <div class="eq-slider-group">
+                            <label for="eq-treble">Agudos</label>
+                            <input type="range" id="eq-treble" class="eq-slider" min="-12" max="12" value="0" step="1">
+                            <span class="eq-value" id="eq-treble-value">0 dB</span>
+                        </div>
+                        <div class="eq-preset-container">
+                            <label>Presets</label>
+                            <div class="eq-presets">
+                                <button class="eq-preset-btn" data-preset="flat">Plano</button>
+                                <button class="eq-preset-btn" data-preset="bass">Graves</button>
+                                <button class="eq-preset-btn" data-preset="vocal">Vocal</button>
+                                <button class="eq-preset-btn" data-preset="rock">Rock</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Notificaciones</h3>
+                    <div class="setting-item">
+                        <label for="notifications-position">
+                            <span>Posición</span>
+                            <span class="setting-description">Dónde mostrar las notificaciones</span>
+                        </label>
+                        <select id="notifications-position" class="setting-select">
+                            <option value="top-right">Superior derecha</option>
+                            <option value="top-left">Superior izquierda</option>
+                            <option value="bottom-right" selected>Inferior derecha</option>
+                            <option value="bottom-left">Inferior izquierda</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="notification-duration">
+                            <span>Duración</span>
+                            <span class="setting-description">Tiempo en pantalla (ms)</span>
+                        </label>
+                        <select id="notification-duration" class="setting-select">
+                            <option value="2000">2 segundos</option>
+                            <option value="3000" selected>3 segundos</option>
+                            <option value="5000">5 segundos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Interfaz</h3>
+                    <div class="setting-item">
+                        <label for="compact-mode-setting">
+                            <span>Modo compacto</span>
+                            <span class="setting-description">Interfaz más compacta para móviles</span>
+                        </label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="compact-mode-setting">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="animations-setting">
+                            <span>Animaciones</span>
+                            <span class="setting-description">Efectos de animación al cambiar canciones</span>
+                        </label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="animations-setting" checked>
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="theme-mode">
+                            <span>Tema</span>
+                            <span class="setting-description">Aspecto visual de la aplicación</span>
+                        </label>
+                        <select id="theme-mode" class="setting-select">
+                            <option value="light">Claro</option>
+                            <option value="dark">Oscuro</option>
+                            <option value="auto">Automático (según sistema)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="accent-color">
+                            <span>Color de acento</span>
+                            <span class="setting-description">Color principal de la interfaz</span>
+                        </label>
+                        <div class="color-picker-container">
+                            <input type="color" id="accent-color" value="#0d6efd" class="color-picker">
+                            <button id="reset-accent-color" class="small-btn secondary-btn">Restablecer</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Visualización</h3>
+                    <div class="setting-item">
+                        <label for="visualizer-enabled">
+                            <span>Visualizador de audio</span>
+                            <span class="setting-description">Mostrar efectos visuales durante la reproducción</span>
+                        </label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="visualizer-enabled" checked>
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="visualizer-type">
+                            <span>Tipo de visualizador</span>
+                            <span class="setting-description">Efecto visual durante la reproducción</span>
+                        </label>
+                        <select id="visualizer-type" class="setting-select">
+                            <option value="bars">Barras</option>
+                            <option value="waves">Ondas</option>
+                            <option value="circle">Círculo</option>
+                            <option value="none">Ninguno</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="transition-effect">
+                            <span>Efecto de transición</span>
+                            <span class="setting-description">Animación al cambiar de canción</span>
+                        </label>
+                        <select id="transition-effect" class="setting-select">
+                            <option value="fade">Desvanecer</option>
+                            <option value="slide">Deslizar</option>
+                            <option value="zoom">Zoom</option>
+                            <option value="none">Ninguno</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de perfil de usuario -->
+    <div id="user-profile-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-profile-modal">&times;</span>
+            <h2>Perfil de Usuario</h2>
+            <div id="profile-view" class="profile-container">
+                <div class="profile-header">
+                    <div class="profile-avatar-container">
+                        <img id="profile-avatar" src="images/placeholder.jpg" alt="Avatar de perfil" class="profile-avatar">
+                    </div>
+                    <div class="profile-info">
+                        <h3 id="profile-username">Nombre de Usuario</h3>
+                        <p id="profile-bio">Sin biografía</p>
+                    </div>
+                </div>
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-count" id="profile-albums-count">0</span>
+                        <span class="stat-label">Álbumes</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-count" id="profile-tracks-count">0</span>
+                        <span class="stat-label">Canciones</span>
+                    </div>
+                </div>
+                <div class="profile-actions">
+                    <button id="edit-profile-btn" class="secondary-btn">
+                        <i class="fas fa-edit"></i> Editar Perfil
+                    </button>
+                </div>
+            </div>
+            <div id="profile-edit" class="profile-edit-container" style="display: none;">
+                <form id="profile-edit-form">
+                    <div class="form-group">
+                        <label for="edit-username">Nombre de Usuario</label>
+                        <input type="text" id="edit-username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-bio">Biografía</label>
+                        <textarea id="edit-bio" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-avatar">Avatar</label>
+                        <div class="file-upload-container">
+                            <label for="edit-avatar" class="file-upload-btn">
+                                <i class="fas fa-upload"></i> Seleccionar imagen
+                            </label>
+                            <input type="file" id="edit-avatar" accept="image/*">
+                            <small class="file-name">Ningún archivo seleccionado</small>
+                        </div>
+                        <div class="avatar-preview-container">
+                            <img id="avatar-preview" src="images/placeholder.jpg" alt="Vista previa del avatar" class="avatar-preview">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancel-profile-edit" class="secondary-btn">Cancelar</button>
+                        <button type="submit" class="primary-btn">Guardar</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 

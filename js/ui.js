@@ -3,6 +3,7 @@
  * Maneja la interacción con el DOM y eventos de la interfaz
  */
 
+// Definir el objeto UI global
 const UI = {
     // Elementos DOM principales
     elements: {
@@ -64,7 +65,49 @@ const UI = {
         confirmDeleteModal: document.getElementById('confirm-delete-modal'),
         confirmDeleteMessage: document.getElementById('confirm-delete-message'),
         confirmDeleteCancel: document.getElementById('confirm-delete-cancel'),
-        confirmDeleteConfirm: document.getElementById('confirm-delete-confirm')
+        confirmDeleteConfirm: document.getElementById('confirm-delete-confirm'),
+        // Elementos de configuración
+        settingsBtn: document.getElementById('settings-btn'),
+        settingsModal: document.getElementById('settings-modal'),
+        settingsModalClose: document.querySelector('#settings-modal .close'),
+        autoplaySetting: document.getElementById('autoplay-setting'),
+        skipSecondsSetting: document.getElementById('skip-seconds'),
+        notificationsPositionSetting: document.getElementById('notifications-position'),
+        notificationDurationSetting: document.getElementById('notification-duration'),
+        compactModeSetting: document.getElementById('compact-mode-setting'),
+        animationsSetting: document.getElementById('animations-setting'),
+        themeMode: document.getElementById('theme-mode'),
+        accentColor: document.getElementById('accent-color'),
+        visualizerEnabled: document.getElementById('visualizer-enabled'),
+        visualizerType: document.getElementById('visualizer-type'),
+        transitionEffect: document.getElementById('transition-effect'),
+        // Elementos para perfil de usuario
+        albumUploader: document.getElementById('album-uploader'),
+        viewProfileBtn: document.getElementById('view-profile-btn'),
+        userProfileModal: document.getElementById('user-profile-modal'),
+        closeProfileModal: document.getElementById('close-profile-modal'),
+        profileUsername: document.getElementById('profile-username'),
+        profileBio: document.getElementById('profile-bio'),
+        profileAvatar: document.getElementById('profile-avatar'),
+        profileAlbumsCount: document.getElementById('profile-albums-count'),
+        profileTracksCount: document.getElementById('profile-tracks-count'),
+        editProfileBtn: document.getElementById('edit-profile-btn'),
+        profileView: document.getElementById('profile-view'),
+        profileEdit: document.getElementById('profile-edit'),
+        profileEditForm: document.getElementById('profile-edit-form'),
+        editUsername: document.getElementById('edit-username'),
+        editBio: document.getElementById('edit-bio'),
+        editAvatar: document.getElementById('edit-avatar'),
+        avatarPreview: document.getElementById('avatar-preview'),
+        cancelProfileEdit: document.getElementById('cancel-profile-edit'),
+        // Elementos para el ecualizador
+        eqBassSlider: document.getElementById('eq-bass'),
+        eqMidSlider: document.getElementById('eq-mid'),
+        eqTrebleSlider: document.getElementById('eq-treble'),
+        eqBassValue: document.getElementById('eq-bass-value'),
+        eqMidValue: document.getElementById('eq-mid-value'),
+        eqTrebleValue: document.getElementById('eq-treble-value'),
+        eqPresetButtons: document.querySelectorAll('.eq-preset-btn')
     },
 
     // Variables de estado
@@ -72,7 +115,51 @@ const UI = {
         currentAlbumId: null,
         currentTrackId: null,
         deleteItemType: null, // 'album' o 'track'
-        confirmCallback: null
+        confirmCallback: null,
+        // Configuración predeterminada
+        settings: {
+            autoplay: true,
+            skipSeconds: 10,
+            notificationsPosition: 'bottom-right',
+            notificationDuration: 3000,
+            compactMode: false,
+            animations: true,
+            themeMode: 'light', // 'light', 'dark', 'auto'
+            accentColor: '#0d6efd',
+            visualizerEnabled: true,
+            visualizerType: 'bars',
+            transitionEffect: 'fade', // 'fade', 'slide', 'zoom', 'none'
+            equalizer: {
+                bass: 0,
+                mid: 0,
+                treble: 0,
+                preset: 'flat'
+            }
+        },
+        visualizer: null,
+        audioContext: null,
+        analyser: null,
+        visualData: null,
+        animationFrame: null,
+        // Ecualizador
+        equalizer: {
+            bass: 0,      // -12 a 12 dB
+            mid: 0,       // -12 a 12 dB
+            treble: 0,    // -12 a 12 dB
+            bassFilter: null,
+            midFilter: null,
+            trebleFilter: null,
+            currentPreset: 'flat'
+        },
+        // Información del usuario
+        currentUser: {
+            username: 'Usuario',
+            bio: 'Sin biografía',
+            avatar: 'images/placeholder.jpg',
+            albums: 0,
+            tracks: 0
+        },
+        uploadedAvatar: null // Avatar subido temporalmente
     },
 
     /**
@@ -81,6 +168,9 @@ const UI = {
     init() {
         this.setupEventListeners();
         this.loadThemePreference();
+        this.loadSettings();
+        this.applyCompactMode();
+        this.initEqualizer();
     },
 
     /**
@@ -194,7 +284,7 @@ const UI = {
 
         // Botón para limpiar el almacenamiento
         this.elements.clearStorageBtn.addEventListener('click', () => {
-            this.confirmDelete('storage', null, '¿Estás seguro de que quieres eliminar TODOS los datos? Esta acción no se puede deshacer.');
+            this.showConfirmDialog('¿Estás seguro de que quieres eliminar todos los datos?', () => this.clearAllStorage());
         });
 
         // NO intentamos acceder a addTrackToAlbumBtn aquí porque se crea dinámicamente
@@ -211,6 +301,128 @@ const UI = {
             }
             this.closeModal(this.elements.confirmDeleteModal);
         });
+
+        // Configuración
+        if (this.elements.settingsBtn) {
+            this.elements.settingsBtn.addEventListener('click', () => this.openSettingsModal());
+        }
+
+        if (this.elements.settingsModalClose) {
+            this.elements.settingsModalClose.addEventListener('click', () => this.closeModal(this.elements.settingsModal));
+        }
+
+        // Guardar configuración cuando cambian los valores
+        if (this.elements.autoplaySetting) {
+            this.elements.autoplaySetting.addEventListener('change', () => this.saveSettings());
+        }
+
+        if (this.elements.skipSecondsSetting) {
+            this.elements.skipSecondsSetting.addEventListener('change', () => this.saveSettings());
+        }
+
+        if (this.elements.notificationsPositionSetting) {
+            this.elements.notificationsPositionSetting.addEventListener('change', () => this.saveSettings());
+        }
+
+        if (this.elements.notificationDurationSetting) {
+            this.elements.notificationDurationSetting.addEventListener('change', () => this.saveSettings());
+        }
+
+        if (this.elements.compactModeSetting) {
+            this.elements.compactModeSetting.addEventListener('change', () => {
+                this.saveSettings();
+                this.applyCompactMode();
+            });
+        }
+
+        if (this.elements.animationsSetting) {
+            this.elements.animationsSetting.addEventListener('change', () => this.saveSettings());
+        }
+
+        if (this.elements.themeMode) {
+            this.elements.themeMode.addEventListener('change', () => this.saveSettings());
+        }
+
+        if (this.elements.accentColor) {
+            this.elements.accentColor.addEventListener('change', () => this.saveSettings());
+        }
+
+        if (this.elements.visualizerEnabled) {
+            this.elements.visualizerEnabled.addEventListener('change', () => this.saveSettings());
+        }
+
+        if (this.elements.visualizerType) {
+            this.elements.visualizerType.addEventListener('change', () => this.saveSettings());
+        }
+
+        if (this.elements.transitionEffect) {
+            this.elements.transitionEffect.addEventListener('change', () => this.saveSettings());
+        }
+
+        // Event listeners para perfil de usuario
+        if (this.elements.viewProfileBtn) {
+            this.elements.viewProfileBtn.addEventListener('click', () => this.openUserProfileModal());
+        }
+        
+        if (this.elements.albumUploader) {
+            this.elements.albumUploader.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.openUserProfileModal();
+            });
+        }
+        
+        if (this.elements.closeProfileModal) {
+            this.elements.closeProfileModal.addEventListener('click', () => this.closeUserProfileModal());
+        }
+        
+        if (this.elements.editProfileBtn) {
+            this.elements.editProfileBtn.addEventListener('click', () => this.showProfileEditView());
+        }
+        
+        if (this.elements.cancelProfileEdit) {
+            this.elements.cancelProfileEdit.addEventListener('click', () => this.showProfileView());
+        }
+        
+        if (this.elements.profileEditForm) {
+            this.elements.profileEditForm.addEventListener('submit', (e) => this.handleProfileEditSubmit(e));
+        }
+        
+        if (this.elements.editAvatar) {
+            this.elements.editAvatar.addEventListener('change', (e) => this.handleAvatarPreview(e));
+        }
+
+        // Event listeners para el ecualizador
+        if (this.elements.eqBassSlider) {
+            this.elements.eqBassSlider.addEventListener('input', (e) => {
+                this.updateEqualizer('bass', parseInt(e.target.value));
+            });
+        }
+        
+        if (this.elements.eqMidSlider) {
+            this.elements.eqMidSlider.addEventListener('input', (e) => {
+                this.updateEqualizer('mid', parseInt(e.target.value));
+            });
+        }
+        
+        if (this.elements.eqTrebleSlider) {
+            this.elements.eqTrebleSlider.addEventListener('input', (e) => {
+                this.updateEqualizer('treble', parseInt(e.target.value));
+            });
+        }
+        
+        if (this.elements.eqPresetButtons) {
+            this.elements.eqPresetButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const preset = button.dataset.preset;
+                    this.applyEqualizerPreset(preset);
+                });
+            });
+        }
+
+        // Botón de perfil en el menú principal
+        if (document.getElementById('profile-btn')) {
+            document.getElementById('profile-btn').addEventListener('click', () => this.openUserProfileModal());
+        }
     },
 
     /**
@@ -432,27 +644,39 @@ const UI = {
     /**
      * Muestra una notificación temporal
      * @param {string} message - Mensaje a mostrar
-     * @param {string} type - Tipo de notificación ('success', 'error')
+     * @param {string} type - Tipo de notificación ('success', 'error', 'info')
+     * @param {number} duration - Duración personalizada (opcional)
      */
-    showNotification(message, type = 'info') {
-        // Crear elemento de notificación si no existe
-        let notification = document.querySelector('.notification');
-        
-        if (!notification) {
-            notification = document.createElement('div');
-            notification.className = 'notification';
-            document.body.appendChild(notification);
+    showNotification(message, type = 'info', duration = null) {
+        // Eliminar cualquier notificación existente
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
         }
         
-        // Configurar estilo según tipo
-        notification.className = `notification ${type}`;
+        // Crear elemento de notificación
+        const notification = document.createElement('div');
+        notification.className = `notification ${type} ${this.state.settings.notificationsPosition}`;
         notification.textContent = message;
-        notification.style.display = 'block';
+        document.body.appendChild(notification);
         
-        // Ocultar después de 3 segundos
+        // Mostrar con animación
         setTimeout(() => {
-            notification.style.display = 'none';
-        }, 3000);
+            notification.style.display = 'block';
+        }, 10);
+        
+        // Duración personalizada o por configuración
+        const displayDuration = duration || this.state.settings.notificationDuration;
+        
+        // Ocultar después del tiempo especificado
+        setTimeout(() => {
+            notification.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, displayDuration);
     },
 
     /**
@@ -710,6 +934,14 @@ const UI = {
             document.getElementById('storage-view').classList.remove('active-view');
             document.getElementById('album-detail-view').classList.add('active-view');
             
+            // Mostrar información del usuario que subió el álbum
+            if (this.elements.albumUploader) {
+                this.elements.albumUploader.textContent = this.state.currentUser.username;
+            }
+
+            // Actualizar contadores para el perfil
+            this.updateUserProfileStats();
+            
         } catch (error) {
             console.error('Error al mostrar detalles del álbum:', error);
             this.showNotification('Error al cargar los detalles del álbum', 'error');
@@ -747,7 +979,7 @@ const UI = {
             // Eliminar resaltado de todas las pistas
             document.querySelectorAll('.track-row').forEach(row => {
                 row.classList.remove('playing');
-                // Actualizar el icono del botu00f3n de reproduccin
+                // Actualizar el icono del botu00f3n de reproducciu00f3n
                 const playBtn = row.querySelector('.track-play-btn i');
                 if (playBtn) playBtn.className = 'fas fa-play';
             });
@@ -771,7 +1003,7 @@ const UI = {
                 const playBtn = trackRow.querySelector('.track-play-btn i');
                 if (playBtn) playBtn.className = 'fas fa-pause';
                 
-                // Hacer scroll a la vista si es necesario y estuu00e1 fuera del viewport
+                // Hacer scroll a la vista si es necesario y estu00e1 fuera del viewport
                 const rect = trackRow.getBoundingClientRect();
                 const isInViewport = (
                     rect.top >= 0 &&
@@ -1252,6 +1484,1097 @@ const UI = {
             this.showNotification('Error al eliminar los datos', 'error');
         }
     },
+    
+    /**
+     * Abre el modal de configuración
+     */
+    openSettingsModal() {
+        // Actualizar controles con la configuración actual
+        this.elements.autoplaySetting.checked = this.state.settings.autoplay;
+        this.elements.skipSecondsSetting.value = this.state.settings.skipSeconds;
+        this.elements.notificationsPositionSetting.value = this.state.settings.notificationsPosition;
+        this.elements.notificationDurationSetting.value = this.state.settings.notificationDuration;
+        this.elements.compactModeSetting.checked = this.state.settings.compactMode;
+        
+        // Nuevos controles
+        if (this.elements.animationsSetting) {
+            this.elements.animationsSetting.checked = this.state.settings.animations;
+        }
+        
+        if (this.elements.themeMode) {
+            this.elements.themeMode.value = this.state.settings.themeMode;
+        }
+        
+        if (this.elements.accentColor) {
+            this.elements.accentColor.value = this.state.settings.accentColor;
+        }
+        
+        if (this.elements.visualizerEnabled) {
+            this.elements.visualizerEnabled.checked = this.state.settings.visualizerEnabled;
+        }
+        
+        if (this.elements.visualizerType) {
+            this.elements.visualizerType.value = this.state.settings.visualizerType;
+        }
+        
+        if (this.elements.transitionEffect) {
+            this.elements.transitionEffect.value = this.state.settings.transitionEffect;
+        }
+        
+        // Mostrar modal
+        this.elements.settingsModal.style.display = 'block';
+    },
+    
+    /**
+     * Aplica todas las configuraciones desde el estado actual
+     */
+    applyAllSettings() {
+        // Aplicar tema
+        this.applyThemeMode();
+        
+        // Aplicar color de acento
+        this.applyAccentColor();
+        
+        // Aplicar modo compacto
+        this.applyCompactMode();
+        
+        // Aplicar animaciones
+        if (this.state.settings.animations) {
+            document.body.classList.remove('no-animations');
+        } else {
+            document.body.classList.add('no-animations');
+        }
+        
+        // Manejar visualizador de audio
+        if (this.state.settings.visualizerEnabled) {
+            this.initAudioVisualizer();
+            // Renderizar el tipo de visualizador seleccionado
+            if (this.state.settings.visualizerType === 'bars') {
+                this.renderBarsVisualizer();
+            } else if (this.state.settings.visualizerType === 'wave') {
+                this.renderWaveVisualizer();
+            } else if (this.state.settings.visualizerType === 'circle') {
+                this.renderCircleVisualizer();
+            }
+        } else if (this.state.animationFrame) {
+            cancelAnimationFrame(this.state.animationFrame);
+        }
+        
+        // Actualizar configuraciu00f3n del reproductor
+        if (Player && typeof Player.updateSettings === 'function') {
+            Player.updateSettings(this.state.settings);
+        }
+        
+        // Aplicar configuraciones de ecualizador
+        this.initEqualizer();
+    },
+    
+    /**
+     * Guarda la configuraciu00f3n actual en localStorage
+     */
+    saveSettings() {
+        // Recopilar valores de los controles bu00e1sicos
+        this.state.settings.autoplay = this.elements.autoplaySetting.checked;
+        this.state.settings.skipSeconds = parseInt(this.elements.skipSecondsSetting.value);
+        this.state.settings.notificationsPosition = this.elements.notificationsPositionSetting.value;
+        this.state.settings.notificationDuration = parseInt(this.elements.notificationDurationSetting.value);
+        this.state.settings.compactMode = this.elements.compactModeSetting.checked;
+        
+        // Recopilar valores de los nuevos controles
+        if (this.elements.animationsSetting) {
+            this.state.settings.animations = this.elements.animationsSetting.checked;
+        }
+        
+        if (this.elements.themeMode) {
+            this.state.settings.themeMode = this.elements.themeMode.value;
+        }
+        
+        if (this.elements.accentColor) {
+            this.state.settings.accentColor = this.elements.accentColor.value;
+        }
+        
+        if (this.elements.visualizerEnabled) {
+            this.state.settings.visualizerEnabled = this.elements.visualizerEnabled.checked;
+        }
+        
+        if (this.elements.visualizerType) {
+            this.state.settings.visualizerType = this.elements.visualizerType.value;
+        }
+        
+        if (this.elements.transitionEffect) {
+            this.state.settings.transitionEffect = this.elements.transitionEffect.value;
+        }
+        
+        // Guardar configuraciones de ecualizador
+        this.state.settings.equalizer = {
+            bass: this.state.equalizer.bass,
+            mid: this.state.equalizer.mid,
+            treble: this.state.equalizer.treble,
+            preset: this.state.equalizer.currentPreset
+        };
+
+        // Guardar en localStorage
+        localStorage.setItem('musicAppSettings', JSON.stringify(this.state.settings));
+        
+        // Aplicar todos los cambios inmediatamente
+        this.applyAllSettings();
+        
+        // Notificar al usuario
+        this.showNotification('Configuraciu00f3n guardada', 'success', 1000);
+    },
+    
+    /**
+     * Carga la configuraciu00f3n guardada
+     */
+    loadSettings() {
+        try {
+            const savedSettings = localStorage.getItem('musicAppSettings');
+            if (savedSettings) {
+                // Fusionar con la configuraciu00f3n predeterminada
+                const parsedSettings = JSON.parse(savedSettings);
+                this.state.settings = { ...this.state.settings, ...parsedSettings };
+                
+                // Restaurar configuraciones de ecualizador si existen
+                if (parsedSettings.equalizer) {
+                    this.state.equalizer.bass = parsedSettings.equalizer.bass || 0;
+                    this.state.equalizer.mid = parsedSettings.equalizer.mid || 0;
+                    this.state.equalizer.treble = parsedSettings.equalizer.treble || 0;
+                    this.state.equalizer.currentPreset = parsedSettings.equalizer.preset || 'flat';
+                }
+            }
+            
+            // Cargar información del usuario si existe
+            this.loadUserProfile();
+            
+            // Aplicar todas las configuraciones inmediatamente
+            this.applyAllSettings();
+        } catch (error) {
+            console.error('Error al cargar la configuraciu00f3n:', error);
+        }
+    },
+    
+    /**
+     * Aplica el efecto de transición seleccionado a un elemento
+     * @param {HTMLElement} element - Elemento al que aplicar la transición
+     */
+    applyTransitionEffect(element) {
+        if (!element || !this.state.settings.animations) return;
+        
+        // Eliminar clases de transición anteriores
+        element.classList.remove('transition-fade', 'transition-slide', 'transition-zoom');
+        
+        // Aplicar el efecto seleccionado
+        const effect = this.state.settings.transitionEffect;
+        if (effect && effect !== 'none') {
+            element.classList.add(`transition-${effect}`);
+        }
+    },
+    
+    /**
+     * Abre el modal de perfil de usuario
+     */
+    openUserProfileModal() {
+        try {
+            // Cargar datos actuales del usuario en el modal
+            if (this.elements.profileUsername) {
+                this.elements.profileUsername.textContent = this.state.currentUser.username || 'Usuario';
+            }
+            
+            if (this.elements.profileBio) {
+                this.elements.profileBio.textContent = this.state.currentUser.bio || 'Sin biografu00eda';
+            }
+            
+            if (this.elements.profileAvatar) {
+                this.elements.profileAvatar.src = this.state.currentUser.avatar || 'images/placeholder.jpg';
+            }
+            
+            // Actualizar contadores
+            this.updateUserProfileStats();
+            
+            // Mostrar vista de perfil (no de ediciu00f3n)
+            this.showProfileView();
+            
+            // Mostrar el modal
+            if (this.elements.userProfileModal) {
+                this.elements.userProfileModal.classList.add('active');
+            }
+        } catch (error) {
+            console.error('Error al abrir el modal de perfil:', error);
+            this.showNotification('Error al abrir el perfil de usuario', 'error');
+        }
+    },
+    
+    /**
+     * Cierra el modal de perfil de usuario
+     */
+    closeUserProfileModal() {
+        if (this.elements.userProfileModal) {
+            this.elements.userProfileModal.classList.remove('active');
+        }
+    },
+    
+    /**
+     * Muestra la vista de perfil (no ediciu00f3n)
+     */
+    showProfileView() {
+        if (this.elements.profileView && this.elements.profileEdit) {
+            this.elements.profileView.style.display = 'flex';
+            this.elements.profileEdit.style.display = 'none';
+        }
+    },
+    
+    /**
+     * Muestra la vista de ediciu00f3n de perfil
+     */
+    showProfileEditView() {
+        try {
+            // Llenar el formulario con los datos actuales
+            if (this.elements.editUsername) {
+                this.elements.editUsername.value = this.state.currentUser.username || 'Usuario';
+            }
+            
+            if (this.elements.editBio) {
+                this.elements.editBio.value = this.state.currentUser.bio || 'Sin biografu00eda';
+            }
+            
+            if (this.elements.avatarPreview) {
+                this.elements.avatarPreview.src = this.state.currentUser.avatar || 'images/placeholder.jpg';
+            }
+            
+            // Mostrar vista de ediciu00f3n
+            if (this.elements.profileView && this.elements.profileEdit) {
+                this.elements.profileView.style.display = 'none';
+                this.elements.profileEdit.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error al mostrar vista de ediciu00f3n de perfil:', error);
+        }
+    },
+    
+    /**
+     * Maneja el envu00edo del formulario de ediciu00f3n de perfil
+     * @param {Event} e - Evento de submit
+     */
+    handleProfileEditSubmit(e) {
+        e.preventDefault();
+        
+        try {
+            // Actualizar datos del usuario
+            this.state.currentUser.username = this.elements.editUsername.value;
+            this.state.currentUser.bio = this.elements.editBio.value;
+            
+            // Si hay una nueva imagen de avatar, usar esa
+            if (this.uploadedAvatar) {
+                this.state.currentUser.avatar = this.uploadedAvatar;
+                this.uploadedAvatar = null; // Limpiar despuu00e9s de usar
+            }
+            
+            // Guardar en localStorage
+            this.saveUserProfile();
+            
+            // Volver a la vista de perfil
+            this.showProfileView();
+            
+            // Actualizar la interfaz con los nuevos datos
+            if (this.elements.profileUsername) {
+                this.elements.profileUsername.textContent = this.state.currentUser.username;
+            }
+            
+            if (this.elements.profileBio) {
+                this.elements.profileBio.textContent = this.state.currentUser.bio;
+            }
+            
+            if (this.elements.profileAvatar) {
+                this.elements.profileAvatar.src = this.state.currentUser.avatar;
+            }
+            
+            // Mostrar notificaciu00f3n
+            this.showNotification('Perfil actualizado correctamente', 'success');
+        } catch (error) {
+            console.error('Error al actualizar perfil:', error);
+            this.showNotification('Error al actualizar el perfil', 'error');
+        }
+    },
+    
+    /**
+     * Maneja la vista previa del avatar
+     * @param {Event} e - Evento de cambio de input
+     */
+    handleAvatarPreview(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Comprobar que sea una imagen
+        if (!file.type.startsWith('image/')) {
+            this.showNotification('El archivo seleccionado no es una imagen', 'error');
+            return;
+        }
+        
+        // Actualizar el nombre del archivo
+        const fileNameElement = e.target.parentElement.querySelector('.file-name');
+        if (fileNameElement) {
+            fileNameElement.textContent = file.name;
+        }
+        
+        // Crear vista previa
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            this.elements.avatarPreview.src = event.target.result;
+            this.uploadedAvatar = event.target.result; // Guardar para uso posterior
+        };
+        reader.readAsDataURL(file);
+    },
+    
+    /**
+     * Guarda el perfil del usuario en localStorage
+     */
+    saveUserProfile() {
+        try {
+            localStorage.setItem('musicAppUserProfile', JSON.stringify(this.state.currentUser));
+        } catch (error) {
+            console.error('Error al guardar perfil de usuario:', error);
+        }
+    },
+    
+    /**
+     * Carga el perfil del usuario desde localStorage
+     */
+    loadUserProfile() {
+        try {
+            const savedProfile = localStorage.getItem('musicAppUserProfile');
+            if (savedProfile) {
+                const parsedProfile = JSON.parse(savedProfile);
+                this.state.currentUser = { ...this.state.currentUser, ...parsedProfile };
+            }
+        } catch (error) {
+            console.error('Error al cargar perfil de usuario:', error);
+        }
+    },
+    
+    /**
+     * Actualiza las estadu00edsticas del perfil de usuario
+     */
+    updateUserProfileStats() {
+        try {
+            // Actualizar contador de u00e1lbumes
+            if (this.elements.profileAlbumsCount) {
+                let albumCount = 0;
+                const albumsGridItems = document.querySelectorAll('#albums-grid .album-card');
+                if (albumsGridItems) {
+                    albumCount = albumsGridItems.length;
+                }
+                this.state.currentUser.albums = albumCount;
+                this.elements.profileAlbumsCount.textContent = albumCount;
+            }
+            
+            // Actualizar contador de pistas (esto podru00eda ser aproximado)
+            if (this.elements.profileTracksCount) {
+                // Una forma simplificada: podemos asumir un promedio de pistas por u00e1lbum
+                // o mejor, podemos obtener el nu00famero real si tenemos acceso a esos datos
+                const trackCount = this.state.currentUser.albums * 5; // Asumiendo un promedio de 5 pistas por u00e1lbum
+                this.state.currentUser.tracks = trackCount;
+                this.elements.profileTracksCount.textContent = trackCount;
+            }
+        } catch (error) {
+            console.error('Error al actualizar estadu00edsticas de perfil:', error);
+        }
+    },
+    
+    /**
+     * Aplica el modo compacto si estu00e1 activado
+     */
+    applyCompactMode() {
+        if (this.state.settings.compactMode) {
+            document.body.classList.add('compact-mode');
+        } else {
+            document.body.classList.remove('compact-mode');
+        }
+    },
+    
+    /**
+     * Aplica el modo de tema segu00fan la configuraciu00f3n
+     */
+    applyThemeMode() {
+        const body = document.body;
+        if (this.state.settings.themeMode === 'light') {
+            body.classList.add('light-mode');
+            body.classList.remove('dark-mode');
+        } else if (this.state.settings.themeMode === 'dark') {
+            body.classList.add('dark-mode');
+            body.classList.remove('light-mode');
+        } else if (this.state.settings.themeMode === 'auto') {
+            // Obtener la preferencia del sistema
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (prefersDark) {
+                body.classList.add('dark-mode');
+                body.classList.remove('light-mode');
+            } else {
+                body.classList.add('light-mode');
+                body.classList.remove('dark-mode');
+            }
+        }
+    },
+    
+    /**
+     * Aplica el color de acento segu00fan la configuraciu00f3n
+     */
+    applyAccentColor() {
+        const accentColor = this.state.settings.accentColor;
+        document.body.style.setProperty('--accent-color', accentColor);
+    },
+    
+    /**
+     * Muestra un diu00e1logo de confirmaciu00f3n personalizado
+     * @param {string} message - Mensaje a mostrar
+     * @param {Function} callback - Funciu00f3n a ejecutar si se confirma
+     */
+    showConfirmDialog(message, callback) {
+        this.elements.confirmDeleteMessage.textContent = message;
+        this.state.confirmCallback = callback;
+        this.elements.confirmDeleteModal.style.display = 'block';
+    },
+    
+    /**
+     * Inicializa el visualizador de audio
+     */
+    initAudioVisualizer() {
+        try {
+            // Verificar si ya existe un contenedor para el visualizador
+            let visualizerContainer = document.querySelector('.audio-visualizer');
+            if (!visualizerContainer) {
+                // Crear un contenedor para el visualizador y au00f1adirlo al reproductor
+                visualizerContainer = document.createElement('div');
+                visualizerContainer.className = 'audio-visualizer';
+                const playerControls = document.querySelector('.player-controls');
+                if (playerControls) {
+                    playerControls.parentNode.insertBefore(visualizerContainer, playerControls.nextSibling);
+                }
+            }
+            
+            // Limpiar el contenedor existente
+            visualizerContainer.innerHTML = '';
+            
+            // Crear el contenedor especu00edfico segu00fan el tipo de visualizador
+            const container = document.createElement('div');
+            
+            if (this.state.settings.visualizerType === 'bars') {
+                container.className = 'visualizer-container';
+                // Crear barras para el visualizador
+                for (let i = 0; i < 30; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'visualizer-bar';
+                    container.appendChild(bar);
+                }
+            } else if (this.state.settings.visualizerType === 'waves') {
+                container.className = 'visualizer-wave';
+                const canvas = document.createElement('canvas');
+                canvas.width = visualizerContainer.clientWidth;
+                canvas.height = visualizerContainer.clientHeight;
+                container.appendChild(canvas);
+                this.state.visualizer = canvas;
+            } else if (this.state.settings.visualizerType === 'circle') {
+                container.className = 'visualizer-circle';
+                const circleInner = document.createElement('div');
+                circleInner.className = 'visualizer-circle-inner';
+                container.appendChild(circleInner);
+                this.state.visualizer = circleInner;
+            }
+            
+            visualizerContainer.appendChild(container);
+            
+            // Inicializar Web Audio API si el tipo es diferente de 'none'
+            if (this.state.settings.visualizerType !== 'none') {
+                this.setupAudioContext();
+            }
+        } catch (error) {
+            console.error('Error al inicializar visualizador:', error);
+        }
+    },
+    
+    /**
+     * Configura el contexto de audio para la visualizaciu00f3n
+     */
+    setupAudioContext() {
+        try {
+            if (!this.state.audioContext && Player && Player.elements && Player.elements.audioPlayer) {
+                this.state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                // Crear nodo de fuente si el reproductor existe
+                const source = this.state.audioContext.createMediaElementSource(Player.elements.audioPlayer);
+                
+                // Crear analizador si no existe
+                if (!this.state.analyser) {
+                    this.state.analyser = this.state.audioContext.createAnalyser();
+                    this.state.analyser.fftSize = 64;
+                    const bufferLength = this.state.analyser.frequencyBinCount;
+                    this.state.visualData = new Uint8Array(bufferLength);
+                    
+                    // Conectar fuente de audio
+                    source.connect(this.state.analyser);
+                    this.state.analyser.connect(this.state.audioContext.destination);
+                }
+                
+                // Iniciar renderizado segu00fan el tipo
+                if (this.state.settings.visualizerType === 'bars') {
+                    this.renderBarsVisualizer();
+                } else if (this.state.settings.visualizerType === 'wave') {
+                    this.renderWaveVisualizer();
+                } else if (this.state.settings.visualizerType === 'circle') {
+                    this.renderCircleVisualizer();
+                }
+            }
+        } catch (error) {
+            console.error('Error al configurar contexto de audio:', error);
+        }
+    },
+    
+    /**
+     * Renderiza el visualizador de barras
+     */
+    renderBarsVisualizer() {
+        try {
+            // Cancelar la animaciu00f3n anterior si existe
+            if (this.state.animationFrame) {
+                cancelAnimationFrame(this.state.animationFrame);
+            }
+            
+            const analyser = this.state.analyser;
+            const visualData = this.state.visualData;
+            const bars = document.querySelectorAll('.visualizer-bar');
+            
+            const updateVisualizer = () => {
+                if (!this.state.settings.visualizerEnabled || 
+                    this.state.settings.visualizerType !== 'bars') {
+                    return;
+                }
+                
+                analyser.getByteFrequencyData(visualData);
+                
+                for (let i = 0; i < bars.length; i++) {
+                    const index = Math.floor(i * visualData.length / bars.length);
+                    const value = visualData[index];
+                    const height = Math.max(3, value / 255 * 40);
+                    bars[i].style.height = `${height}px`;
+                }
+                
+                this.state.animationFrame = requestAnimationFrame(updateVisualizer);
+            };
+            
+            this.state.animationFrame = requestAnimationFrame(updateVisualizer);
+        } catch (error) {
+            console.error('Error al renderizar visualizador de barras:', error);
+        }
+    },
+    
+    /**
+     * Renderiza el visualizador de ondas
+     */
+    renderWaveVisualizer() {
+        try {
+            // Cancelar la animaciu00f3n anterior si existe
+            if (this.state.animationFrame) {
+                cancelAnimationFrame(this.state.animationFrame);
+            }
+            
+            const analyser = this.state.analyser;
+            const visualData = this.state.visualData;
+            const canvas = this.state.visualizer;
+            
+            if (!canvas || !canvas.getContext) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            const updateVisualizer = () => {
+                if (!this.state.settings.visualizerEnabled || 
+                    this.state.settings.visualizerType !== 'waves') {
+                    return;
+                }
+                
+                analyser.getByteFrequencyData(visualData);
+                
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--accent-light');
+                
+                // En modo oscuro, usar color de acento para modo oscuro
+                if (document.body.classList.contains('dark-mode')) {
+                    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--accent-dark');
+                }
+                
+                ctx.beginPath();
+                ctx.moveTo(0, height);
+                
+                const sliceWidth = width / visualData.length;
+                let x = 0;
+                
+                for (let i = 0; i < visualData.length; i++) {
+                    const v = visualData[i] / 255;
+                    const y = height - (v * height);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    x += sliceWidth;
+                }
+                
+                ctx.lineTo(width, height);
+                ctx.closePath();
+                ctx.fill();
+                
+                this.state.animationFrame = requestAnimationFrame(updateVisualizer);
+            };
+            
+            this.state.animationFrame = requestAnimationFrame(updateVisualizer);
+        } catch (error) {
+            console.error('Error al renderizar visualizador de ondas:', error);
+        }
+    },
+    
+    /**
+     * Renderiza el visualizador circular
+     */
+    renderCircleVisualizer() {
+        try {
+            // Cancelar la animaciu00f3n anterior si existe
+            if (this.state.animationFrame) {
+                cancelAnimationFrame(this.state.animationFrame);
+            }
+            
+            const analyser = this.state.analyser;
+            const visualData = this.state.visualData;
+            const circle = this.state.visualizer;
+            
+            if (!circle) return;
+            
+            const updateVisualizer = () => {
+                if (!this.state.settings.visualizerEnabled || 
+                    this.state.settings.visualizerType !== 'circle') {
+                    return;
+                }
+                
+                analyser.getByteFrequencyData(visualData);
+                
+                // Calcular promedio de frecuencias bajas (graves)
+                let sum = 0;
+                for (let i = 0; i < 8; i++) {
+                    sum += visualData[i];
+                }
+                const average = sum / 8;
+                
+                // Escalar el cu00edrculo basado en la intensidad del audio
+                const scale = 1 + (average / 255);
+                circle.style.transform = `scale(${scale})`;
+                
+                this.state.animationFrame = requestAnimationFrame(updateVisualizer);
+            };
+            
+            this.state.animationFrame = requestAnimationFrame(updateVisualizer);
+        } catch (error) {
+            console.error('Error al renderizar visualizador circular:', error);
+        }
+    },
+    
+    /**
+     * Inicializa el ecualizador de audio
+     */
+    initEqualizer() {
+        try {
+            // Asegurarse de que el contexto de audio esté configurado
+            if (!this.state.audioContext && Player && Player.elements && Player.elements.audioPlayer) {
+                this.state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                // Crear nodo de fuente si el reproductor existe
+                const source = this.state.audioContext.createMediaElementSource(Player.elements.audioPlayer);
+                
+                // Crear filtros
+                // Filtro de graves (baja frecuencia) - Low Shelf Filter
+                this.state.equalizer.bassFilter = this.state.audioContext.createBiquadFilter();
+                this.state.equalizer.bassFilter.type = 'lowshelf';
+                this.state.equalizer.bassFilter.frequency.value = 200;
+                
+                // Filtro de medios (frecuencia media) - Peaking Filter
+                this.state.equalizer.midFilter = this.state.audioContext.createBiquadFilter();
+                this.state.equalizer.midFilter.type = 'peaking';
+                this.state.equalizer.midFilter.frequency.value = 1000;
+                this.state.equalizer.midFilter.Q.value = 1;
+                
+                // Filtro de agudos (alta frecuencia) - High Shelf Filter
+                this.state.equalizer.trebleFilter = this.state.audioContext.createBiquadFilter();
+                this.state.equalizer.trebleFilter.type = 'highshelf';
+                this.state.equalizer.trebleFilter.frequency.value = 3000;
+                
+                // Conectar nodos
+                source.connect(this.state.equalizer.bassFilter);
+                this.state.equalizer.bassFilter.connect(this.state.equalizer.midFilter);
+                this.state.equalizer.midFilter.connect(this.state.equalizer.trebleFilter);
+                this.state.equalizer.trebleFilter.connect(this.state.audioContext.destination);
+                
+                // Si hay un analizador, conectarlo después del ecualizador
+                if (this.state.analyser) {
+                    this.state.equalizer.trebleFilter.disconnect(this.state.audioContext.destination);
+                    this.state.equalizer.trebleFilter.connect(this.state.analyser);
+                    this.state.analyser.connect(this.state.audioContext.destination);
+                }
+            }
+            
+            // Actualizar UI para reflejar los valores actuales
+            this.updateEqualizerUI();
+            
+            // Aplicar valores guardados a los filtros
+            if (this.state.equalizer.bassFilter) {
+                this.state.equalizer.bassFilter.gain.value = this.state.equalizer.bass;
+            }
+            
+            if (this.state.equalizer.midFilter) {
+                this.state.equalizer.midFilter.gain.value = this.state.equalizer.mid;
+            }
+            
+            if (this.state.equalizer.trebleFilter) {
+                this.state.equalizer.trebleFilter.gain.value = this.state.equalizer.treble;
+            }
+            
+            // Marcar el preset activo en la UI
+            this.highlightActivePreset();
+        } catch (error) {
+            console.error('Error al inicializar el ecualizador:', error);
+        }
+    },
+    
+    /**
+     * Actualiza los valores del ecualizador
+     * @param {string} band - Banda a actualizar ('bass', 'mid', o 'treble')
+     * @param {number} value - Valor en dB (-12 a 12)
+     */
+    updateEqualizer(band, value) {
+        try {
+            // Actualizar estado
+            this.state.equalizer[band] = value;
+            
+            // Actualizar filtro correspondiente
+            if (this.state.equalizer[`${band}Filter`]) {
+                this.state.equalizer[`${band}Filter`].gain.value = value;
+            }
+            
+            // Actualizar UI
+            const valueElement = this.elements[`eq${band.charAt(0).toUpperCase() + band.slice(1)}Value`];
+            if (valueElement) {
+                valueElement.textContent = `${value > 0 ? '+' : ''}${value} dB`;
+            }
+            
+            // Actualizar preset (a personalizado si se ajusta manualmente)
+            this.state.equalizer.currentPreset = 'custom';
+            this.highlightActivePreset();
+            
+            // Guardar configuración
+            this.saveSettings();
+            
+            // Notificar al usuario
+            this.showNotification(`Ecualizador ajustado`, 'info', 1000);
+        } catch (error) {
+            console.error(`Error al actualizar el ecualizador (${band}):`, error);
+        }
+    },
+    
+    /**
+     * Actualiza la UI del ecualizador con los valores actuales
+     */
+    updateEqualizerUI() {
+        // Actualizar sliders
+        if (this.elements.eqBassSlider) {
+            this.elements.eqBassSlider.value = this.state.equalizer.bass;
+            this.elements.eqBassValue.textContent = `${this.state.equalizer.bass > 0 ? '+' : ''}${this.state.equalizer.bass} dB`;
+        }
+        
+        if (this.elements.eqMidSlider) {
+            this.elements.eqMidSlider.value = this.state.equalizer.mid;
+            this.elements.eqMidValue.textContent = `${this.state.equalizer.mid > 0 ? '+' : ''}${this.state.equalizer.mid} dB`;
+        }
+        
+        if (this.elements.eqTrebleSlider) {
+            this.elements.eqTrebleSlider.value = this.state.equalizer.treble;
+            this.elements.eqTrebleValue.textContent = `${this.state.equalizer.treble > 0 ? '+' : ''}${this.state.equalizer.treble} dB`;
+        }
+    },
+    
+    /**
+     * Aplica un preset de ecualizador
+     * @param {string} preset - Nombre del preset ('flat', 'bass', 'vocal', 'rock')
+     */
+    applyEqualizerPreset(preset) {
+        try {
+            // Definir valores para cada preset
+            let bassValue = 0;
+            let midValue = 0;
+            let trebleValue = 0;
+            
+            switch (preset) {
+                case 'flat':
+                    // Valores planos (0 dB en todas las bandas)
+                    bassValue = 0;
+                    midValue = 0;
+                    trebleValue = 0;
+                    break;
+                case 'bass':
+                    // Refuerzo de graves
+                    bassValue = 6;
+                    midValue = -2;
+                    trebleValue = 0;
+                    break;
+                case 'vocal':
+                    // Mejora la claridad vocal
+                    bassValue = -2;
+                    midValue = 4;
+                    trebleValue = 2;
+                    break;
+                case 'rock':
+                    // Perfil para rock
+                    bassValue = 3;
+                    midValue = 0;
+                    trebleValue = 4;
+                    break;
+                default:
+                    return;
+            }
+            
+            // Actualizar estado
+            this.state.equalizer.bass = bassValue;
+            this.state.equalizer.mid = midValue;
+            this.state.equalizer.treble = trebleValue;
+            this.state.equalizer.currentPreset = preset;
+            
+            // Actualizar filtros
+            if (this.state.equalizer.bassFilter) {
+                this.state.equalizer.bassFilter.gain.value = bassValue;
+            }
+            
+            if (this.state.equalizer.midFilter) {
+                this.state.equalizer.midFilter.gain.value = midValue;
+            }
+            
+            if (this.state.equalizer.trebleFilter) {
+                this.state.equalizer.trebleFilter.gain.value = trebleValue;
+            }
+            
+            // Actualizar UI
+            this.updateEqualizerUI();
+            this.highlightActivePreset();
+            
+            // Guardar configuración
+            this.saveSettings();
+            
+            // Notificar al usuario
+            this.showNotification(`Preset de ecualizador: ${preset}`, 'info', 1000);
+        } catch (error) {
+            console.error(`Error al aplicar preset de ecualizador (${preset}):`, error);
+        }
+    },
+    
+    /**
+     * Resalta el preset activo en la UI
+     */
+    highlightActivePreset() {
+        if (!this.elements.eqPresetButtons) return;
+        
+        // Quitar clase activa de todos los botones
+        this.elements.eqPresetButtons.forEach(button => {
+            button.classList.remove('active');
+            
+            // Agregar clase activa al preset actual
+            if (button.dataset.preset === this.state.equalizer.currentPreset) {
+                button.classList.add('active');
+            }
+        });
+    },
+    
+    /**
+     * Muestra los detalles de un álbum
+     * @param {number} albumId - ID del álbum a mostrar
+     */
+    async showAlbumDetails(albumId) {
+        try {
+            // Guardar el ID del álbum actual
+            this.state.currentAlbumId = albumId;
+            
+            // Obtener datos del álbum y sus pistas
+            const album = await DB.getAlbumById(albumId);
+            const tracks = await DB.getTracksByAlbumId(albumId);
+            
+            if (!album) {
+                throw new Error('Álbum no encontrado');
+            }
+            
+            // Actualizar la interfaz con los datos del álbum
+            this.elements.detailCover.src = album.coverImage || 'images/placeholder.jpg';
+            this.elements.detailTitle.textContent = album.title;
+            this.elements.detailArtist.textContent = album.artist;
+            this.elements.detailYear.textContent = album.year;
+            
+            // Actualizar lista de pistas
+            this.elements.detailTracksList.innerHTML = '';
+            
+            if (tracks.length === 0) {
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.innerHTML = `
+                    <i class="fas fa-music"></i>
+                    <p>Este álbum no tiene canciones</p>
+                    <p>Añade pistas usando el botón de arriba</p>
+                `;
+                this.elements.detailTracksList.appendChild(emptyState);
+            } else {
+                // Crear tabla para la lista de pistas
+                const table = document.createElement('table');
+                table.className = 'tracks-table';
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th class="track-select"><input type="checkbox" id="select-all-tracks" aria-label="Seleccionar todas las pistas"></th>
+                            <th class="track-number">#</th>
+                            <th class="track-title">Título</th>
+                            <th class="track-actions">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tracks-table-body"></tbody>
+                `;
+                
+                this.elements.detailTracksList.appendChild(table);
+                const tableBody = document.getElementById('tracks-table-body');
+                
+                // Crear filas para cada pista
+                tracks.forEach((track, index) => {
+                    const row = document.createElement('tr');
+                    row.className = 'track-row';
+                    row.setAttribute('data-track-id', track.id);
+                    row.innerHTML = `
+                        <td class="track-select"><input type="checkbox" class="track-checkbox" data-track-id="${track.id}"></td>
+                        <td class="track-number">${index + 1}</td>
+                        <td class="track-title track-name">${track.title}</td>
+                        <td class="track-actions">
+                            <button class="track-play-btn control-btn" title="Reproducir"><i class="fas fa-play"></i></button>
+                            <button class="track-edit-btn control-btn" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button class="track-delete-btn control-btn" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                    
+                    // Configurar los eventos para esta pista
+                    const playBtn = row.querySelector('.track-play-btn');
+                    const editBtn = row.querySelector('.track-edit-btn');
+                    const deleteBtn = row.querySelector('.track-delete-btn');
+                    const trackTitle = row.querySelector('.track-name');
+                    
+                    // Doble clic en título de la canción para reproducir
+                    trackTitle.addEventListener('dblclick', () => this.playTrack(track.id));
+                    
+                    // Doble clic en la fila para reproducir
+                    row.addEventListener('dblclick', (e) => {
+                        // Verificar que no se hizo doble clic en un botón o checkbox
+                        if (!e.target.closest('button') && !e.target.closest('input[type="checkbox"]')) {
+                            this.playTrack(track.id);
+                        }
+                    });
+                    
+                    // Clicks en botones
+                    playBtn.addEventListener('click', () => this.playTrack(track.id));
+                    editBtn.addEventListener('click', () => this.openEditTrackModal(track.id));
+                    deleteBtn.addEventListener('click', () => this.confirmDeleteItem('track', track.id));
+                });
+                
+                // Evento para seleccionar/deseleccionar todas las pistas
+                const selectAllCheckbox = document.getElementById('select-all-tracks');
+                selectAllCheckbox.addEventListener('change', () => {
+                    const checkboxes = document.querySelectorAll('.track-checkbox');
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = selectAllCheckbox.checked;
+                    });
+                    this.updateSelectedTracksActions();
+                });
+                
+                // Evento para cada checkbox
+                const trackCheckboxes = document.querySelectorAll('.track-checkbox');
+                trackCheckboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', () => {
+                        this.updateSelectedTracksActions();
+                    });
+                });
+                
+                // Añadir botones de acciones para pistas seleccionadas
+                const selectedActionsDiv = document.createElement('div');
+                selectedActionsDiv.id = 'selected-tracks-actions';
+                selectedActionsDiv.className = 'selected-tracks-actions hidden';
+                selectedActionsDiv.innerHTML = `
+                    <span id="selected-count">0 pistas seleccionadas</span>
+                    <button id="play-selected-btn" class="primary-btn small-btn"><i class="fas fa-play"></i> Reproducir</button>
+                    <button id="deselect-all-btn" class="secondary-btn small-btn"><i class="fas fa-times"></i> Deseleccionar</button>
+                `;
+                
+                // Insertar antes de la tabla
+                this.elements.detailTracksList.insertBefore(selectedActionsDiv, table);
+                
+                // Configurar eventos para los botones de pistas seleccionadas
+                document.getElementById('play-selected-btn').addEventListener('click', () => {
+                    this.playSelectedTracks();
+                });
+                
+                document.getElementById('deselect-all-btn').addEventListener('click', () => {
+                    const checkboxes = document.querySelectorAll('.track-checkbox');
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    document.getElementById('select-all-tracks').checked = false;
+                    this.updateSelectedTracksActions();
+                });
+            }
+            
+            // Actualizar el click handler del botón de añadir canción
+            document.getElementById('add-track-to-album-btn').onclick = (e) => {
+                e.preventDefault();
+                this.openAddTrackModal(albumId);
+            };
+            
+            // Actualizar el click handler del botón de reproducir álbum
+            document.getElementById('play-album-btn').onclick = (e) => {
+                e.preventDefault();
+                if (tracks.length > 0) {
+                    Player.loadAlbum(albumId);
+                } else {
+                    this.showNotification('Este álbum no tiene canciones para reproducir', 'error');
+                }
+            };
+            
+            // Actualizar el click handler del botón de editar álbum
+            document.getElementById('edit-album-btn').onclick = (e) => {
+                e.preventDefault();
+                this.openEditAlbumModal(albumId);
+            };
+            
+            // Actualizar el click handler del botón de eliminar álbum
+            document.getElementById('delete-album-btn').onclick = (e) => {
+                e.preventDefault();
+                this.confirmDeleteItem('album', albumId);
+            };
+            
+            // Mostrar la vista de detalle y ocultar la principal
+            document.getElementById('main-view').classList.remove('active-view');
+            document.getElementById('storage-view').classList.remove('active-view');
+            document.getElementById('album-detail-view').classList.add('active-view');
+            
+            // Mostrar información del usuario que subió el álbum
+            if (this.elements.albumUploader) {
+                this.elements.albumUploader.textContent = this.state.currentUser.username;
+            }
+
+            // Actualizar contadores para el perfil
+            this.updateUserProfileStats();
+            
+        } catch (error) {
+            console.error('Error al mostrar detalles del álbum:', error);
+            this.showNotification('Error al cargar los detalles del álbum', 'error');
+        }
+    }
 };
 
 /**
@@ -1267,3 +2590,20 @@ function debounce(func, wait) {
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
+
+// Inicializar UI cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    // Comprobar que UI esté definido antes de inicializarlo
+    if (typeof UI !== 'undefined') {
+        try {
+            UI.init();
+            console.log('UI inicializada correctamente');
+        } catch (error) {
+            console.error('Error al inicializar UI:', error);
+            alert('Hubo un problema al iniciar la aplicación: ' + error.message + '. Por favor, recarga la página.');
+        }
+    } else {
+        console.error('UI no está definida');
+        alert('Hubo un problema al iniciar la aplicación: UI no está definida. Por favor, recarga la página.');
+    }
+});
