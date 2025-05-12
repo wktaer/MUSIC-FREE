@@ -1,28 +1,35 @@
 /* Variables globales */
 :root {
     /* Colores - Modo claro */
-    --background-light: #f7f7f7;
-    --text-primary-light: #333333;
-    --text-secondary-light: #666666;
-    --accent-light: #2196f3;
-    --border-light: #cccccc;
+    --background-light: #f8f9fa;
+    --text-primary-light: #212529;
+    --text-secondary-light: #6c757d;
+    --accent-light: #0d6efd;
+    --accent-hover-light: #0b5ed7;
+    --border-light: #dee2e6;
     --card-bg-light: #ffffff;
-    --modal-bg-light: #f7f7f7;
+    --modal-bg-light: #f8f9fa;
+    --hover-light: #f1f3f5;
+    --playing-light: rgba(13, 110, 253, 0.1);
 
     /* Colores - Modo oscuro */
-    --background-dark: #333333;
-    --text-primary-dark: #ffffff;
-    --text-secondary-dark: #cccccc;
-    --accent-dark: #4caf50;
-    --border-dark: #666666;
-    --card-bg-dark: #444444;
-    --modal-bg-dark: #333333;
+    --background-dark: #212529;
+    --text-primary-dark: #f8f9fa;
+    --text-secondary-dark: #adb5bd;
+    --accent-dark: #0d6efd;
+    --accent-hover-dark: #0a58ca;
+    --border-dark: #495057;
+    --card-bg-dark: #343a40;
+    --modal-bg-dark: #343a40;
+    --hover-dark: #343a40;
+    --playing-dark: rgba(13, 110, 253, 0.2);
 
     /* Dimensiones */
     --header-height: 60px;
-    --footer-height: 70px;
+    --footer-height: 80px;
     --album-card-size: 220px;
     --border-radius: 10px;
+    --btn-border-radius: 6px;
 }
 
 /* Estilos generales */
@@ -307,12 +314,12 @@ button:disabled {
 
 .light-mode .search-container input:focus {
     border-color: var(--accent-light);
-    box-shadow: 0 2px 12px rgba(33, 150, 243, 0.15);
+    box-shadow: 0 2px 12px rgba(13, 110, 253, 0.15);
 }
 
 .dark-mode .search-container input:focus {
     border-color: var(--accent-dark);
-    box-shadow: 0 2px 12px rgba(76, 175, 80, 0.2);
+    box-shadow: 0 2px 12px rgba(13, 110, 253, 0.2);
 }
 
 .search-container i {
@@ -430,32 +437,175 @@ main {
     color: var(--text-secondary-dark);
 }
 
-.album-play {
-    position: absolute;
-    bottom: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-    background-color: var(--accent-light);
+/* Media queries para dispositivos móviles */
+@media (max-width: 768px) {
+    /* Ajuste general de dimensiones */
+    :root {
+        --footer-height: 140px;
+        --album-card-size: 160px;
+    }
+    
+    /* Ajustes para el encabezado */
+    .header-content {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 10px 15px;
+    }
+    
+    .header-controls {
+        width: 100%;
+        justify-content: space-between;
+        order: 2;
+    }
+    
+    .search-container {
+        max-width: 100%;
+        order: 3;
+        width: 100%;
+        margin-top: 8px;
+    }
+    
+    /* Ocultar botones menos importantes en móviles */
+    #storage-btn {
+        display: none;
+    }
+    
+    .primary-btn span {
+        display: none; /* Ocultar texto en botones, mostrar solo iconos */
+    }
+    
+    /* Ajustar tamano y espaciado del contenido principal */
+    main {
+        padding: 10px 5px;
+    }
+    
+    .albums-container {
+        gap: 8px;
+        padding: 8px 5px;
+    }
+    
+    /* Estilos para las tarjetas de albumes en móviles */
+    .album-card {
+        width: 100%;
+        max-width: var(--album-card-size);
+        margin: 0 auto;
+    }
+    
+    /* Ajustes para la vista detallada del álbum */
+    .album-detail-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .album-detail-cover {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .album-detail-info {
+        width: 100%;
+    }
+    
+    .album-detail-actions {
+        justify-content: center;
+        gap: 8px;
+    }
+    
+    /* Ajustes para la tabla de pistas en móviles */
+    .tracks-table {
+        font-size: 0.85rem;
+    }
+    
+    .tracks-table th, 
+    .tracks-table td {
+        padding: 10px 8px;
+    }
+    
+    /* Ocultar columnas menos importantes en pantallas pequeñas */
+    .tracks-table th.track-number, 
+    .tracks-table td.track-number {
+        display: none;
+    }
+    
+    /* Hacer los botones de acciones más grandes para facilitar toques */
+    .track-actions .control-btn {
+        width: 40px;
+        height: 40px;
+    }
+    
+    /* Mejorar el contenedor de acciones para pistas seleccionadas */
+    .selected-tracks-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 10px;
+    }
+    
+    #selected-count {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 8px;
+        margin-right: 0;
+    }
+    
+    /* Ajustar espacio adicional para el reproductor */
+    .view-section {
+        padding-bottom: 160px;
+    }
+    
+    .view-section main {
+        padding-bottom: 160px;
+    }
+}
+
+/* Optimizaciones para móviles muy pequeños */
+@media (max-width: 480px) {
+    /* Reducir aún más los botones */
+    .primary-btn, .secondary-btn {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+    
+    /* Ajustar detalles de álbum para pantallas muy pequeñas */
+    .album-detail-cover {
+        width: 150px;
+        height: 150px;
+    }
+    
+    /* Simplificar modales en pantallas pequeñas */
+    .modal-content {
+        padding: 20px 15px;
+        width: 95%;
+        margin: 20px auto;
+    }
+    
+    /* Ajustes para checkboxes y botones de acción */
+    input[type="checkbox"] {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .track-actions .control-btn {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* Botón de peligro (eliminar) */
+.danger-btn {
+    background-color: #f44336;
     color: white;
-    border: none;
-    border-radius: 50%;
+    padding: 10px 15px;
+    font-weight: 500;
     display: flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0.9;
-    transition: opacity 0.3s, transform 0.3s;
-    z-index: 2;
+    gap: 8px;
 }
 
-.dark-mode .album-play {
-    background-color: var(--accent-dark);
-}
-
-.album-play:hover {
-    opacity: 1;
-    transform: scale(1.1);
+.danger-btn:hover {
+    background-color: #e53935;
 }
 
 /* Modal */
@@ -509,6 +659,19 @@ main {
 
 .dark-mode .close:hover {
     color: var(--text-primary-dark);
+}
+
+/* Modal de confirmación */
+.confirm-modal {
+    max-width: 400px;
+    text-align: center;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
 }
 
 /* Estilos para vista detallada del álbum */
@@ -600,126 +763,165 @@ main {
     align-items: center;
 }
 
-.tracks-list {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+/* Estilos para la tabla de pistas */
+.tracks-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.95rem;
 }
 
-.track-list-item {
-    display: grid;
-    grid-template-columns: 30px 1fr auto;
-    align-items: center;
+.light-mode .tracks-table {
+    color: var(--text-primary-light);
+}
+
+.dark-mode .tracks-table {
+    color: var(--text-primary-dark);
+}
+
+.tracks-table thead th {
+    text-align: left;
     padding: 12px 15px;
-    border-radius: var(--border-radius);
-    transition: background-color 0.2s;
+    font-weight: 500;
+    border-bottom: 1px solid;
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
-.light-mode .track-list-item {
+.light-mode .tracks-table thead th {
     background-color: var(--card-bg-light);
+    border-bottom-color: var(--border-light);
 }
 
-.dark-mode .track-list-item {
+.dark-mode .tracks-table thead th {
     background-color: var(--card-bg-dark);
+    border-bottom-color: var(--border-dark);
 }
 
-.track-list-item:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+.tracks-table th.track-select {
+    width: 40px;
 }
 
-.dark-mode .track-list-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+.tracks-table th.track-number {
+    width: 60px;
 }
 
-.track-number {
-    font-size: 0.9rem;
-    color: var(--text-secondary-light);
+.tracks-table th.track-actions {
+    width: 140px;
+    text-align: right;
+}
+
+.tracks-table .track-row {
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.light-mode .tracks-table .track-row:hover {
+    background-color: var(--hover-light);
+}
+
+.dark-mode .tracks-table .track-row:hover {
+    background-color: var(--hover-dark);
+}
+
+.tracks-table .track-row.playing {
     font-weight: 500;
 }
 
-.dark-mode .track-number {
-    color: var(--text-secondary-dark);
+.light-mode .tracks-table .track-row.playing {
+    background-color: var(--playing-light);
 }
 
-.track-info {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+.dark-mode .tracks-table .track-row.playing {
+    background-color: var(--playing-dark);
 }
 
-.track-list-title {
-    font-size: 1rem;
-    white-space: nowrap;
+.tracks-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid;
+}
+
+.light-mode .tracks-table td {
+    border-bottom-color: var(--border-light);
+}
+
+.dark-mode .tracks-table td {
+    border-bottom-color: var(--border-dark);
+}
+
+.tracks-table td.track-select,
+.tracks-table td.track-number {
+    text-align: center;
+}
+
+.tracks-table td.track-title {
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
 }
 
-.track-actions {
-    display: flex;
-    gap: 5px;
+.tracks-table td.track-actions {
+    text-align: right;
 }
 
 .track-actions .control-btn {
     width: 36px;
     height: 36px;
-    display: flex;
+    border-radius: 50%;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    background-color: transparent;
     transition: all 0.2s;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    margin-left: 5px;
 }
 
-.track-actions .control-btn:hover {
-    background-color: rgba(0, 0, 0, 0.1);
+.light-mode .track-actions .control-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode .track-actions .control-btn:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-.track-play-btn:hover {
-    color: var(--accent-light);
-}
-
-.dark-mode .track-play-btn:hover {
-    color: var(--accent-dark);
-}
-
-.track-edit-btn:hover {
-    color: #4caf50;
-}
-
-.track-delete-btn:hover {
-    color: #f44336;
-}
-
-/* Botón de peligro (eliminar) */
-.danger-btn {
-    background-color: #f44336;
-    color: white;
-    padding: 10px 15px;
-    font-weight: 500;
+/* Estilos para las acciones de selección de pistas */
+.selected-tracks-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    padding: 10px 15px;
+    margin-top: 15px;
+    border-radius: var(--border-radius);
+    gap: 10px;
 }
 
-.danger-btn:hover {
-    background-color: #e53935;
+.light-mode .selected-tracks-actions {
+    background-color: var(--hover-light);
+    border: 1px solid var(--border-light);
 }
 
-/* Modal de confirmación */
-.confirm-modal {
-    max-width: 400px;
-    text-align: center;
+.dark-mode .selected-tracks-actions {
+    background-color: var(--hover-dark);
+    border: 1px solid var(--border-dark);
 }
 
-.confirm-actions {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
+.selected-tracks-actions.hidden {
+    display: none;
+}
+
+#selected-count {
+    font-weight: 500;
+    margin-right: auto;
+}
+
+/* Mejorar apariencia de los checkboxes */
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
 }
 
 /* Notificaciones */
@@ -783,439 +985,4 @@ main {
 
 .empty-state p {
     margin: 5px 0;
-}
-
-/* Adaptabilidad */
-@media (max-width: 768px) {
-    .header-content {
-        flex-direction: column;
-        padding: 10px;
-        height: auto;
-    }
-
-    .header-controls {
-        width: 100%;
-        justify-content: space-between;
-        margin-top: 10px;
-    }
-
-    .search-container input {
-        width: 150px;
-    }
-
-    .search-container input:focus {
-        width: 200px;
-    }
-
-    main {
-        padding-top: calc(var(--header-height) + 60px);
-    }
-
-    .albums-container {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    }
-
-    .modal-content {
-        width: 95%;
-        padding: 20px;
-        margin: 20px auto;
-    }
-
-    .cover-upload {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .album-detail-header {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-    
-    .album-detail-cover {
-        width: 200px;
-        height: 200px;
-    }
-    
-    .album-detail-actions {
-        justify-content: center;
-    }
-}
-
-/* Reproductor de música */
-.player {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: var(--footer-height);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    z-index: 1000;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-
-.light-mode .player {
-    background-color: rgba(255, 255, 255, 0.95);
-    border-top: 1px solid var(--border-light);
-}
-
-.dark-mode .player {
-    background-color: rgba(18, 18, 18, 0.95);
-    border-top: 1px solid var(--border-dark);
-}
-
-.player-cover {
-    width: 50px;
-    height: 50px;
-    border-radius: 5px;
-    object-fit: cover;
-}
-
-.current-song-info {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    width: 25%;
-}
-
-.player-title-artist {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.player-song-title {
-    font-weight: 600;
-    font-size: 0.85rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.player-artist-name {
-    font-size: 0.75rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.light-mode .player-artist-name {
-    color: var(--text-secondary-light);
-}
-
-.dark-mode .player-artist-name {
-    color: var(--text-secondary-dark);
-}
-
-.player-controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    width: 50%;
-}
-
-.control-buttons {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-}
-
-.control-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: transform 0.2s, color 0.2s;
-}
-
-.play-pause-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-}
-
-.light-mode .play-pause-btn {
-    background-color: var(--accent-light);
-    color: white;
-}
-
-.dark-mode .play-pause-btn {
-    background-color: var(--accent-dark);
-    color: white;
-}
-
-.control-btn:hover {
-    transform: scale(1.1);
-}
-
-.light-mode .control-btn {
-    color: var(--text-primary-light);
-}
-
-.dark-mode .control-btn {
-    color: var(--text-primary-dark);
-}
-
-.progress-container {
-    width: 100%;
-    height: 5px;
-    background-color: rgba(0, 0, 0, 0.1);
-    border-radius: 5px;
-    position: relative;
-    cursor: pointer;
-    margin-bottom: 5px;
-}
-
-.dark-mode .progress-container {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.progress-bar {
-    height: 100%;
-    background-color: var(--accent-light);
-    border-radius: 5px;
-    width: 0;
-    position: relative;
-}
-
-.dark-mode .progress-bar {
-    background-color: var(--accent-dark);
-}
-
-.progress-handle {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: white;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-    display: none;
-}
-
-.progress-container:hover .progress-handle {
-    display: block;
-}
-
-.song-time {
-    display: flex;
-    width: 100%;
-    justify-content: space-between;
-    font-size: 0.75rem;
-}
-
-.light-mode .song-time {
-    color: var(--text-secondary-light);
-}
-
-.dark-mode .song-time {
-    color: var(--text-secondary-dark);
-}
-
-.volume-control {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 25%;
-    justify-content: flex-end;
-}
-
-.volume-slider {
-    width: 80px;
-    height: 5px;
-    background-color: rgba(0, 0, 0, 0.1);
-    border-radius: 5px;
-    position: relative;
-    cursor: pointer;
-}
-
-.dark-mode .volume-slider {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.volume-level {
-    height: 100%;
-    background-color: var(--accent-light);
-    border-radius: 5px;
-    width: 70%;
-}
-
-.dark-mode .volume-level {
-    background-color: var(--accent-dark);
-}
-
-.volume-icon {
-    cursor: pointer;
-    font-size: 1rem;
-    transition: color 0.2s;
-}
-
-.light-mode .volume-icon {
-    color: var(--text-primary-light);
-}
-
-.dark-mode .volume-icon {
-    color: var(--text-primary-dark);
-}
-
-/* Media queries para dispositivos móviles */
-@media (max-width: 768px) {
-    :root {
-        --album-card-size: 160px;
-        --header-height: 60px;
-        --footer-height: 70px;
-    }
-    
-    html {
-        font-size: 16px;
-    }
-    
-    .header-content {
-        flex-direction: column;
-        padding: 10px;
-        gap: 10px;
-        height: auto;
-    }
-    
-    header {
-        height: auto;
-        position: sticky;
-    }
-    
-    .header-controls {
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: center;
-    }
-    
-    .search-container {
-        width: 100%;
-        order: -1;
-    }
-    
-    .albums-container {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 15px;
-        padding: 15px;
-    }
-    
-    /* Ajustes para vista detallada del álbum */
-    .album-detail-header {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .album-detail-cover {
-        width: 200px;
-        height: 200px;
-        margin-bottom: 20px;
-    }
-    
-    .album-detail-info {
-        width: 100%;
-        text-align: center;
-    }
-    
-    .album-detail-actions {
-        justify-content: center;
-    }
-    
-    /* Ajustes para el reproductor en móviles */
-    .player {
-        flex-direction: column;
-        height: auto;
-        padding: 10px;
-    }
-    
-    .current-song-info {
-        width: 100%;
-        margin-bottom: 10px;
-        justify-content: center;
-    }
-    
-    .player-controls {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    
-    .volume-control {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    /* Ajustes para modales */
-    .modal-content {
-        width: 95%;
-        max-height: 90vh;
-        padding: 15px;
-    }
-    
-    /* Ajustar parriba para compensar el reproductor más alto */
-    .view-section {
-        padding-bottom: 140px;
-    }
-    
-    .view-section main {
-        padding-bottom: 140px;
-    }
-}
-
-@media (max-width: 480px) {
-    :root {
-        --album-card-size: 140px;
-    }
-    
-    .albums-container {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 10px;
-        padding: 10px;
-    }
-    
-    .storage-stats-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .album-detail-cover {
-        width: 160px;
-        height: 160px;
-    }
-    
-    /* Simplificar reproductor aún más */
-    .player-controls {
-        width: 100%;
-    }
-    
-    .control-buttons {
-        gap: 15px;
-    }
-    
-    /* Reducir tamaño de texto */
-    .detail-title {
-        font-size: 1.5rem;
-    }
-    
-    .detail-artist {
-        font-size: 1rem;
-    }
-    
-    /* Ajustar espacio adicional para el reproductor */
-    .view-section {
-        padding-bottom: 160px;
-    }
-    
-    .view-section main {
-        padding-bottom: 160px;
-    }
 }

@@ -542,7 +542,8 @@ const UI = {
      */
     async showAlbumDetails(albumId) {
         try {
-            console.log('Mostrando detalles del álbum:', albumId);
+            // Guardar el ID del álbum actual
+            this.state.currentAlbumId = albumId;
             
             // Obtener datos del álbum y sus pistas
             const album = await DB.getAlbumById(albumId);
@@ -552,103 +553,279 @@ const UI = {
                 throw new Error('Álbum no encontrado');
             }
             
-            // Actualizar el ID de álbum actual
-            this.state.currentAlbumId = albumId;
-            
-            // Actualizar la interfaz de detalles
-            this.elements.detailCover.src = album.coverImage;
+            // Actualizar la interfaz con los datos del álbum
+            this.elements.detailCover.src = album.coverImage || 'images/placeholder.jpg';
             this.elements.detailTitle.textContent = album.title;
             this.elements.detailArtist.textContent = album.artist;
             this.elements.detailYear.textContent = album.year;
             
-            // Limpiar y cargar la lista de pistas
+            // Actualizar lista de pistas
             this.elements.detailTracksList.innerHTML = '';
             
             if (tracks.length === 0) {
-                const emptyMessage = document.createElement('div');
-                emptyMessage.className = 'empty-tracks';
-                emptyMessage.innerHTML = '<p>Este álbum no tiene canciones.</p>';
-                this.elements.detailTracksList.appendChild(emptyMessage);
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.innerHTML = `
+                    <i class="fas fa-music"></i>
+                    <p>Este álbum no tiene canciones</p>
+                    <p>Añade pistas usando el botón de arriba</p>
+                `;
+                this.elements.detailTracksList.appendChild(emptyState);
             } else {
+                // Crear tabla para la lista de pistas
+                const table = document.createElement('table');
+                table.className = 'tracks-table';
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th class="track-select"><input type="checkbox" id="select-all-tracks" aria-label="Seleccionar todas las pistas"></th>
+                            <th class="track-number">#</th>
+                            <th class="track-title">Título</th>
+                            <th class="track-actions">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tracks-table-body"></tbody>
+                `;
+                
+                this.elements.detailTracksList.appendChild(table);
+                const tableBody = document.getElementById('tracks-table-body');
+                
+                // Crear filas para cada pista
                 tracks.forEach((track, index) => {
-                    const trackItem = document.createElement('div');
-                    trackItem.className = 'track-list-item';
-                    trackItem.dataset.trackId = track.id;
-                    
-                    trackItem.innerHTML = `
-                        <div class="track-number">${index + 1}</div>
-                        <div class="track-info">
-                            <div class="track-list-title">${track.title}</div>
-                        </div>
-                        <div class="track-actions">
-                            <button class="icon-btn track-play-btn" title="Reproducir pista">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <button class="icon-btn track-edit-btn" title="Editar pista">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="icon-btn track-delete-btn" title="Eliminar pista">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
+                    const row = document.createElement('tr');
+                    row.className = 'track-row';
+                    row.setAttribute('data-track-id', track.id);
+                    row.innerHTML = `
+                        <td class="track-select"><input type="checkbox" class="track-checkbox" data-track-id="${track.id}"></td>
+                        <td class="track-number">${index + 1}</td>
+                        <td class="track-title track-name">${track.title}</td>
+                        <td class="track-actions">
+                            <button class="track-play-btn control-btn" title="Reproducir"><i class="fas fa-play"></i></button>
+                            <button class="track-edit-btn control-btn" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button class="track-delete-btn control-btn" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        </td>
                     `;
                     
-                    // Añadir event listeners
-                    trackItem.querySelector('.track-play-btn').addEventListener('click', () => {
-                        Player.loadAlbum(albumId, index);
+                    tableBody.appendChild(row);
+                    
+                    // Configurar los eventos para esta pista
+                    const playBtn = row.querySelector('.track-play-btn');
+                    const editBtn = row.querySelector('.track-edit-btn');
+                    const deleteBtn = row.querySelector('.track-delete-btn');
+                    const trackTitle = row.querySelector('.track-name');
+                    
+                    // Doble clic en título de la canción para reproducir
+                    trackTitle.addEventListener('dblclick', () => this.playTrack(track.id));
+                    
+                    // Doble clic en la fila para reproducir
+                    row.addEventListener('dblclick', (e) => {
+                        // Verificar que no se hizo doble clic en un botón o checkbox
+                        if (!e.target.closest('button') && !e.target.closest('input[type="checkbox"]')) {
+                            this.playTrack(track.id);
+                        }
                     });
                     
-                    trackItem.querySelector('.track-edit-btn').addEventListener('click', () => {
-                        this.openEditTrackModal(track.id);
+                    // Clicks en botones
+                    playBtn.addEventListener('click', () => this.playTrack(track.id));
+                    editBtn.addEventListener('click', () => this.openEditTrackModal(track.id));
+                    deleteBtn.addEventListener('click', () => this.confirmDeleteItem('track', track.id));
+                });
+                
+                // Evento para seleccionar/deseleccionar todas las pistas
+                const selectAllCheckbox = document.getElementById('select-all-tracks');
+                selectAllCheckbox.addEventListener('change', () => {
+                    const checkboxes = document.querySelectorAll('.track-checkbox');
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = selectAllCheckbox.checked;
                     });
-                    
-                    trackItem.querySelector('.track-delete-btn').addEventListener('click', () => {
-                        this.confirmDelete('track', track.id, '¿Estás seguro de que quieres eliminar esta pista?');
+                    this.updateSelectedTracksActions();
+                });
+                
+                // Evento para cada checkbox
+                const trackCheckboxes = document.querySelectorAll('.track-checkbox');
+                trackCheckboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', () => {
+                        this.updateSelectedTracksActions();
                     });
-                    
-                    this.elements.detailTracksList.appendChild(trackItem);
+                });
+                
+                // Añadir botones de acciones para pistas seleccionadas
+                const selectedActionsDiv = document.createElement('div');
+                selectedActionsDiv.id = 'selected-tracks-actions';
+                selectedActionsDiv.className = 'selected-tracks-actions hidden';
+                selectedActionsDiv.innerHTML = `
+                    <span id="selected-count">0 pistas seleccionadas</span>
+                    <button id="play-selected-btn" class="primary-btn small-btn"><i class="fas fa-play"></i> Reproducir</button>
+                    <button id="deselect-all-btn" class="secondary-btn small-btn"><i class="fas fa-times"></i> Deseleccionar</button>
+                `;
+                
+                // Insertar antes de la tabla
+                this.elements.detailTracksList.insertBefore(selectedActionsDiv, table);
+                
+                // Configurar eventos para los botones de pistas seleccionadas
+                document.getElementById('play-selected-btn').addEventListener('click', () => {
+                    this.playSelectedTracks();
+                });
+                
+                document.getElementById('deselect-all-btn').addEventListener('click', () => {
+                    const checkboxes = document.querySelectorAll('.track-checkbox');
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    document.getElementById('select-all-tracks').checked = false;
+                    this.updateSelectedTracksActions();
                 });
             }
             
             // Actualizar el click handler del botón de añadir canción
             document.getElementById('add-track-to-album-btn').onclick = (e) => {
                 e.preventDefault();
-                console.log('Clic en añadir canción para álbum:', this.state.currentAlbumId);
-                this.openAddTrackModal(this.state.currentAlbumId);
+                this.openAddTrackModal(albumId);
             };
             
             // Actualizar el click handler del botón de reproducir álbum
-            this.elements.playAlbumBtn.onclick = (e) => {
+            document.getElementById('play-album-btn').onclick = (e) => {
                 e.preventDefault();
                 if (tracks.length > 0) {
                     Player.loadAlbum(albumId);
                 } else {
-                    this.showNotification('Este álbum no tiene canciones para reproducir', 'info');
+                    this.showNotification('Este álbum no tiene canciones para reproducir', 'error');
                 }
             };
             
             // Actualizar el click handler del botón de editar álbum
-            this.elements.editAlbumBtn.onclick = (e) => {
+            document.getElementById('edit-album-btn').onclick = (e) => {
                 e.preventDefault();
                 this.openEditAlbumModal(albumId);
             };
             
             // Actualizar el click handler del botón de eliminar álbum
-            this.elements.deleteAlbumBtn.onclick = (e) => {
+            document.getElementById('delete-album-btn').onclick = (e) => {
                 e.preventDefault();
-                this.confirmDelete('album', albumId, '¿Estás seguro de que quieres eliminar este álbum?');
+                this.confirmDeleteItem('album', albumId);
             };
             
-            // Mostrar la vista de detalles
-            this.elements.mainView.classList.remove('active-view');
-            this.elements.albumDetailView.classList.add('active-view');
-            this.elements.storageView.classList.remove('active-view');
-            
-            console.log('Vista de detalles mostrada correctamente');
+            // Mostrar la vista de detalle y ocultar la principal
+            document.getElementById('main-view').classList.remove('active-view');
+            document.getElementById('storage-view').classList.remove('active-view');
+            document.getElementById('album-detail-view').classList.add('active-view');
             
         } catch (error) {
-            console.error('Error al mostrar detalles:', error);
+            console.error('Error al mostrar detalles del álbum:', error);
             this.showNotification('Error al cargar los detalles del álbum', 'error');
+        }
+    },
+
+    /**
+     * Actualiza la UI para mostrar las acciones para pistas seleccionadas
+     */
+    updateSelectedTracksActions() {
+        const selectedCheckboxes = document.querySelectorAll('.track-checkbox:checked');
+        const count = selectedCheckboxes.length;
+        const actionsDiv = document.getElementById('selected-tracks-actions');
+        
+        if (!actionsDiv) return;
+        
+        if (count > 0) {
+            // Mostrar la barra de acciones
+            actionsDiv.classList.remove('hidden');
+            
+            // Actualizar el contador
+            const countText = count === 1 ? '1 pista seleccionada' : `${count} pistas seleccionadas`;
+            document.getElementById('selected-count').textContent = countText;
+        } else {
+            // Ocultar la barra de acciones
+            actionsDiv.classList.add('hidden');
+        }
+    },
+    
+    /**
+     * Resalta la pista actual en la interfaz
+     */
+    highlightCurrentTrack() {
+        try {
+            // Eliminar resaltado de todas las pistas
+            document.querySelectorAll('.track-row').forEach(row => {
+                row.classList.remove('playing');
+                // Actualizar el icono del botu00f3n de reproduccin
+                const playBtn = row.querySelector('.track-play-btn i');
+                if (playBtn) playBtn.className = 'fas fa-play';
+            });
+            
+            // Si no hay reproducciu00f3n activa, salir
+            if (!Player.state.isPlaying || !Player.state.tracks.length) {
+                return;
+            }
+            
+            // Obtener la pista actual
+            const currentTrack = Player.state.tracks[Player.state.currentTrackIndex];
+            if (!currentTrack) return;
+            
+            // Encontrar y resaltar la fila correspondiente
+            const trackRow = document.querySelector(`.track-row[data-track-id="${currentTrack.id}"]`);
+            if (trackRow) {
+                // Resaltar la fila
+                trackRow.classList.add('playing');
+                
+                // Cambiar el icono del botuu00f3n a pausa
+                const playBtn = trackRow.querySelector('.track-play-btn i');
+                if (playBtn) playBtn.className = 'fas fa-pause';
+                
+                // Hacer scroll a la vista si es necesario y estuu00e1 fuera del viewport
+                const rect = trackRow.getBoundingClientRect();
+                const isInViewport = (
+                    rect.top >= 0 &&
+                    rect.left >= 0 &&
+                    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+                );
+                
+                if (!isInViewport) {
+                    trackRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        } catch (error) {
+            console.error('Error al resaltar pista actual:', error);
+        }
+    },
+
+    /**
+     * Reproduce las pistas seleccionadas
+     */
+    async playSelectedTracks() {
+        try {
+            // Obtener los IDs de las pistas seleccionadas
+            const selectedCheckboxes = document.querySelectorAll('.track-checkbox:checked');
+            const selectedTrackIds = Array.from(selectedCheckboxes).map(checkbox => 
+                parseInt(checkbox.getAttribute('data-track-id'))
+            );
+            
+            if (selectedTrackIds.length === 0) {
+                this.showNotification('No hay pistas seleccionadas', 'info');
+                return;
+            }
+            
+            // Obtener los objetos de pista completos
+            const selectedTracks = [];
+            for (const id of selectedTrackIds) {
+                const track = await DB.getTrackById(id);
+                if (track) {
+                    selectedTracks.push(track);
+                }
+            }
+            
+            if (selectedTracks.length === 0) {
+                throw new Error('No se encontraron las pistas seleccionadas');
+            }
+            
+            // Reproducir la lista personalizada
+            Player.playCustomTrackList(selectedTracks, this.state.currentAlbumId);
+            
+            // Mostrar notificaciu00f3n
+            this.showNotification(`Reproduciendo ${selectedTracks.length} pistas seleccionadas`, 'info');
+        } catch (error) {
+            console.error('Error al reproducir pistas seleccionadas:', error);
+            this.showNotification('Error al reproducir las pistas seleccionadas', 'error');
         }
     },
 
@@ -658,19 +835,28 @@ const UI = {
      */
     async playTrack(trackId) {
         try {
+            // Obtener la pista
             const track = await DB.getTrackById(trackId);
-            
             if (!track) {
                 throw new Error('Pista no encontrada');
             }
             
-            // Cargar el álbum al que pertenece la pista
-            const tracks = await DB.getTracksByAlbumId(track.albumId);
-            const trackIndex = tracks.findIndex(t => t.id === trackId);
+            // Obtener todas las pistas del álbum actual
+            const albumId = track.albumId;
+            const allTracks = await DB.getTracksByAlbumId(albumId);
             
-            if (trackIndex !== -1) {
-                Player.loadAlbum(track.albumId, trackIndex);
+            // Encontrar el índice de la pista seleccionada
+            const trackIndex = allTracks.findIndex(t => t.id === trackId);
+            
+            if (trackIndex === -1) {
+                throw new Error('Pista no encontrada en el álbum');
             }
+            
+            // Cargar el álbum en el reproductor comenzando por esta pista
+            Player.loadAlbum(albumId, trackIndex);
+            
+            // Resaltar la pista actual en la UI
+            this.highlightCurrentTrack();
         } catch (error) {
             console.error('Error al reproducir pista:', error);
             this.showNotification('Error al reproducir la pista', 'error');
@@ -879,7 +1065,7 @@ const UI = {
      * @param {number} id - ID del elemento a eliminar
      * @param {string} message - Mensaje de confirmación
      */
-    confirmDelete(type, id, message) {
+    confirmDeleteItem(type, id, message) {
         this.state.deleteItemType = type;
         this.elements.confirmDeleteMessage.textContent = message;
         

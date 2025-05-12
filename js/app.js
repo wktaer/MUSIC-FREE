@@ -6,6 +6,8 @@
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        console.log('Iniciando la aplicación...');
+        
         // Crear la carpeta de imágenes si no existe y agregar imagen placeholder
         await createImagePlaceholder();
         
@@ -14,8 +16,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Base de datos inicializada');
         
         // Inicializar la interfaz de usuario
-        UI.init();
+        await UI.init();
         console.log('Interfaz de usuario inicializada');
+        
+        // Crear un pequeño retraso para asegurar que todos los elementos del DOM están listos
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Inicializar el reproductor
         Player.init();
@@ -27,12 +32,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Mostrar notificación de bienvenida
         setTimeout(() => {
-            UI.showNotification('Bienvenido a MusicApp \ud83c\udfb5', 'info');
+            UI.showNotification('Bienvenido a MusicApp 🎵', 'info');
         }, 1000);
         
     } catch (error) {
         console.error('Error al iniciar la aplicación:', error);
-        alert('Hubo un problema al iniciar la aplicación. Por favor, recarga la página.');
+        // Mostrar mensaje de error más detallado para facilitar depuración
+        const errorMessage = error.message || 'Error desconocido';
+        alert(`Hubo un problema al iniciar la aplicación: ${errorMessage}. Por favor, recarga la página.`);
     }
 });
 
